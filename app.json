@@ -33,6 +33,9 @@
       ]
     ],
     "scheme": "selfpay",
+    "experiments": {
+      "typedRoutes": false
+    },
     "extra": {
       "eas": {
         "projectId": "your-project-id"

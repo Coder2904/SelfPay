@@ -1,0 +1,192 @@
+{
+  "status": {
+    "isActive": true,
+    "tier": "premium",
+    "expiresAt": "2025-02-14T10:00:00Z",
+    "features": [
+      "surge_optimization",
+      "income_tracking",
+      "goal_setting",
+      "basic_analytics",
+      "bank_linking"
+    ],
+    "autoRenew": true,
+    "trialEndsAt": null
+  },
+  "availablePlans": [
+    {
+      "id": "plan_free",
+      "tier": "free",
+      "name": "Free",
+      "description": "Basic features to get started with gig work optimization",
+      "price": 0,
+      "currency": "USD",
+      "interval": "monthly",
+      "features": [
+        "Basic surge alerts",
+        "Limited income tracking",
+        "Basic goal setting"
+      ],
+      "isPopular": false,
+      "trialDays": 0
+    },
+    {
+      "id": "plan_premium_monthly",
+      "tier": "premium",
+      "name": "Premium",
+      "description": "Advanced optimization and tracking for serious gig workers",
+      "price": 9.99,
+      "currency": "USD",
+      "interval": "monthly",
+      "features": [
+        "Real-time surge optimization",
+        "Multi-platform income tracking",
+        "Advanced goal setting",
+        "Bank account linking",
+        "Basic analytics dashboard",
+        "Email support"
+      ],
+      "isPopular": true,
+      "trialDays": 7
+    },
+    {
+      "id": "plan_premium_yearly",
+      "tier": "premium",
+      "name": "Premium Annual",
+      "description": "Premium features with annual savings",
+      "price": 99.99,
+      "currency": "USD",
+      "interval": "yearly",
+      "features": [
+        "Real-time surge optimization",
+        "Multi-platform income tracking",
+        "Advanced goal setting",
+        "Bank account linking",
+        "Basic analytics dashboard",
+        "Email support"
+      ],
+      "isPopular": false,
+      "trialDays": 14
+    },
+    {
+      "id": "plan_pro_monthly",
+      "tier": "pro",
+      "name": "Pro",
+      "description": "Professional-grade tools for power users and fleet managers",
+      "price": 19.99,
+      "currency": "USD",
+      "interval": "monthly",
+      "features": [
+        "All Premium features",
+        "Advanced analytics and reporting",
+        "Tax optimization tools",
+        "Fleet management (up to 5 drivers)",
+        "Priority support",
+        "Custom integrations",
+        "Export capabilities"
+      ],
+      "isPopular": false,
+      "trialDays": 14
+    },
+    {
+      "id": "plan_pro_yearly",
+      "tier": "pro",
+      "name": "Pro Annual",
+      "description": "Pro features with maximum savings",
+      "price": 199.99,
+      "currency": "USD",
+      "interval": "yearly",
+      "features": [
+        "All Premium features",
+        "Advanced analytics and reporting",
+        "Tax optimization tools",
+        "Fleet management (up to 5 drivers)",
+        "Priority support",
+        "Custom integrations",
+        "Export capabilities"
+      ],
+      "isPopular": false,
+      "trialDays": 30
+    }
+  ],
+  "features": [
+    {
+      "id": "feature_surge_optimization",
+      "name": "Surge Optimization",
+      "description": "Real-time surge pricing alerts and zone recommendations",
+      "tier": "premium",
+      "isEnabled": true
+    },
+    {
+      "id": "feature_income_tracking",
+      "name": "Income Tracking",
+      "description": "Multi-platform income tracking and categorization",
+      "tier": "premium",
+      "isEnabled": true
+    },
+    {
+      "id": "feature_goal_setting",
+      "name": "Goal Setting",
+      "description": "Set and track weekly and monthly earning goals",
+      "tier": "free",
+      "isEnabled": true
+    },
+    {
+      "id": "feature_bank_linking",
+      "name": "Bank Account Linking",
+      "description": "Connect bank accounts for automatic transaction import",
+      "tier": "premium",
+      "isEnabled": true
+    },
+    {
+      "id": "feature_basic_analytics",
+      "name": "Basic Analytics",
+      "description": "View earnings trends and platform performance",
+      "tier": "premium",
+      "isEnabled": true
+    },
+    {
+      "id": "feature_advanced_analytics",
+      "name": "Advanced Analytics",
+      "description": "Detailed reporting, tax optimization, and custom insights",
+      "tier": "pro",
+      "isEnabled": false
+    },
+    {
+      "id": "feature_fleet_management",
+      "name": "Fleet Management",
+      "description": "Manage multiple drivers and vehicles",
+      "tier": "pro",
+      "isEnabled": false
+    },
+    {
+      "id": "feature_priority_support",
+      "name": "Priority Support",
+      "description": "24/7 priority customer support",
+      "tier": "pro",
+      "isEnabled": false
+    },
+    {
+      "id": "feature_custom_integrations",
+      "name": "Custom Integrations",
+      "description": "API access and custom platform integrations",
+      "tier": "pro",
+      "isEnabled": false
+    },
+    {
+      "id": "feature_export_capabilities",
+      "name": "Export Capabilities",
+      "description": "Export data to CSV, PDF, and accounting software",
+      "tier": "pro",
+      "isEnabled": false
+    }
+  ],
+  "mockPurchaseInfo": {
+    "productId": "plan_premium_monthly",
+    "transactionId": "txn_mock_12345",
+    "purchaseDate": "2025-01-14T10:00:00Z",
+    "expirationDate": "2025-02-14T10:00:00Z",
+    "isTrialPeriod": false,
+    "originalTransactionId": "txn_mock_12345"
+  }
+}

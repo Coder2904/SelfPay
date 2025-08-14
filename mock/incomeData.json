@@ -1,0 +1,150 @@
+{
+  "accounts": [
+    {
+      "id": "acc_chase_checking",
+      "name": "Chase Total Checking",
+      "type": "checking",
+      "balance": 2450.75,
+      "platform": "chase",
+      "isConnected": true,
+      "lastSync": "2025-01-14T09:30:00Z"
+    },
+    {
+      "id": "acc_bofa_savings",
+      "name": "Bank of America Savings",
+      "type": "savings",
+      "balance": 8750.25,
+      "platform": "bankofamerica",
+      "isConnected": true,
+      "lastSync": "2025-01-14T09:25:00Z"
+    },
+    {
+      "id": "acc_wells_checking",
+      "name": "Wells Fargo Everyday Checking",
+      "type": "checking",
+      "balance": 1205.5,
+      "platform": "wellsfargo",
+      "isConnected": false,
+      "lastSync": "2025-01-12T14:20:00Z"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "txn_uber_001",
+      "amount": 32.5,
+      "description": "Uber ride earnings - Downtown SF",
+      "date": "2025-01-14T08:45:00Z",
+      "platform": "uber",
+      "category": "rideshare",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_doordash_001",
+      "amount": 28.75,
+      "description": "DoorDash delivery earnings - Mission District",
+      "date": "2025-01-14T07:30:00Z",
+      "platform": "doordash",
+      "category": "delivery",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_lyft_001",
+      "amount": 45.2,
+      "description": "Lyft ride earnings - SOMA area",
+      "date": "2025-01-13T19:15:00Z",
+      "platform": "lyft",
+      "category": "rideshare",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_instacart_001",
+      "amount": 22.5,
+      "description": "Instacart shopping earnings - Grocery delivery",
+      "date": "2025-01-13T16:45:00Z",
+      "platform": "instacart",
+      "category": "delivery",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_uber_002",
+      "amount": 38.9,
+      "description": "Uber ride earnings - Airport run",
+      "date": "2025-01-13T14:20:00Z",
+      "platform": "uber",
+      "category": "rideshare",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_grubhub_001",
+      "amount": 19.25,
+      "description": "Grubhub delivery earnings - Castro District",
+      "date": "2025-01-13T12:30:00Z",
+      "platform": "grubhub",
+      "category": "delivery",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_lyft_002",
+      "amount": 41.75,
+      "description": "Lyft ride earnings - Financial District",
+      "date": "2025-01-12T18:45:00Z",
+      "platform": "lyft",
+      "category": "rideshare",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_uber_003",
+      "amount": 29.6,
+      "description": "Uber ride earnings - Marina District",
+      "date": "2025-01-12T15:10:00Z",
+      "platform": "uber",
+      "category": "rideshare",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_doordash_002",
+      "amount": 33.4,
+      "description": "DoorDash delivery earnings - Lunch rush",
+      "date": "2025-01-12T13:20:00Z",
+      "platform": "doordash",
+      "category": "delivery",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_postmates_001",
+      "amount": 26.8,
+      "description": "Postmates delivery earnings - Sunset District",
+      "date": "2025-01-11T20:30:00Z",
+      "platform": "postmates",
+      "category": "delivery",
+      "accountId": "acc_chase_checking"
+    },
+    {
+      "id": "txn_savings_transfer",
+      "amount": 200.0,
+      "description": "Weekly savings transfer",
+      "date": "2025-01-11T10:00:00Z",
+      "platform": "chase",
+      "category": "transfer",
+      "accountId": "acc_bofa_savings"
+    },
+    {
+      "id": "txn_lyft_003",
+      "amount": 52.3,
+      "description": "Lyft ride earnings - Weekend surge",
+      "date": "2025-01-11T22:15:00Z",
+      "platform": "lyft",
+      "category": "rideshare",
+      "accountId": "acc_chase_checking"
+    }
+  ],
+  "summary": {
+    "totalEarnings": 1847.5,
+    "weeklyGoal": 800.0,
+    "goalProgress": 0.73,
+    "topPlatform": "uber",
+    "weeklyEarnings": 584.25,
+    "monthlyEarnings": 1847.5,
+    "averageDailyEarnings": 41.95
+  }
+}

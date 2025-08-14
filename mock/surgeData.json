@@ -1,0 +1,150 @@
+{
+  "surgeZones": [
+    {
+      "id": "zone_sf_downtown",
+      "location": {
+        "lat": 37.7749,
+        "lng": -122.4194,
+        "name": "Downtown San Francisco"
+      },
+      "multiplier": 2.5,
+      "platform": "uber",
+      "timestamp": "2025-01-14T10:00:00Z",
+      "duration": 3600
+    },
+    {
+      "id": "zone_sf_mission",
+      "location": {
+        "lat": 37.7599,
+        "lng": -122.4148,
+        "name": "Mission District"
+      },
+      "multiplier": 1.8,
+      "platform": "lyft",
+      "timestamp": "2025-01-14T10:15:00Z",
+      "duration": 2700
+    },
+    {
+      "id": "zone_sf_soma",
+      "location": {
+        "lat": 37.7849,
+        "lng": -122.4094,
+        "name": "SOMA"
+      },
+      "multiplier": 3.2,
+      "platform": "uber",
+      "timestamp": "2025-01-14T09:45:00Z",
+      "duration": 4500
+    },
+    {
+      "id": "zone_sf_castro",
+      "location": {
+        "lat": 37.7609,
+        "lng": -122.435,
+        "name": "Castro District"
+      },
+      "multiplier": 1.5,
+      "platform": "doordash",
+      "timestamp": "2025-01-14T10:30:00Z",
+      "duration": 1800
+    },
+    {
+      "id": "zone_sf_financial",
+      "location": {
+        "lat": 37.7946,
+        "lng": -122.3999,
+        "name": "Financial District"
+      },
+      "multiplier": 2.1,
+      "platform": "uber",
+      "timestamp": "2025-01-14T08:30:00Z",
+      "duration": 5400
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "rec_surge_downtown",
+      "type": "surge",
+      "platform": "uber",
+      "title": "High Surge in Downtown",
+      "description": "2.5x surge multiplier active in Downtown SF. High demand expected for next hour.",
+      "estimatedEarnings": 45.5,
+      "confidence": 0.85,
+      "location": "Downtown San Francisco",
+      "timeWindow": {
+        "start": "2025-01-14T10:00:00Z",
+        "end": "2025-01-14T11:00:00Z"
+      }
+    },
+    {
+      "id": "rec_demand_soma",
+      "type": "demand",
+      "platform": "lyft",
+      "title": "Peak Demand in SOMA",
+      "description": "High rider demand detected in SOMA area. Consider positioning here for consistent rides.",
+      "estimatedEarnings": 38.75,
+      "confidence": 0.72,
+      "location": "SOMA",
+      "timeWindow": {
+        "start": "2025-01-14T10:00:00Z",
+        "end": "2025-01-14T12:00:00Z"
+      }
+    },
+    {
+      "id": "rec_bonus_delivery",
+      "type": "bonus",
+      "platform": "doordash",
+      "title": "Lunch Rush Bonus",
+      "description": "Extra $3 per delivery during lunch rush. Complete 5 deliveries for additional $15 bonus.",
+      "estimatedEarnings": 52.0,
+      "confidence": 0.9,
+      "location": "Mission District",
+      "timeWindow": {
+        "start": "2025-01-14T11:30:00Z",
+        "end": "2025-01-14T14:00:00Z"
+      }
+    },
+    {
+      "id": "rec_surge_financial",
+      "type": "surge",
+      "platform": "uber",
+      "title": "Morning Commute Surge",
+      "description": "2.1x surge in Financial District. Business commuters heading to work.",
+      "estimatedEarnings": 41.25,
+      "confidence": 0.78,
+      "location": "Financial District",
+      "timeWindow": {
+        "start": "2025-01-14T08:30:00Z",
+        "end": "2025-01-14T10:00:00Z"
+      }
+    },
+    {
+      "id": "rec_demand_airport",
+      "type": "demand",
+      "platform": "lyft",
+      "title": "Airport Queue Opportunity",
+      "description": "Short wait time at SFO pickup. Good opportunity for airport runs.",
+      "estimatedEarnings": 65.0,
+      "confidence": 0.65,
+      "location": "San Francisco International Airport",
+      "timeWindow": {
+        "start": "2025-01-14T10:00:00Z",
+        "end": "2025-01-14T16:00:00Z"
+      }
+    },
+    {
+      "id": "rec_bonus_grocery",
+      "type": "bonus",
+      "platform": "instacart",
+      "title": "Weekend Grocery Bonus",
+      "description": "Extra $5 per batch for grocery deliveries. Peak shopping hours.",
+      "estimatedEarnings": 28.5,
+      "confidence": 0.82,
+      "timeWindow": {
+        "start": "2025-01-14T09:00:00Z",
+        "end": "2025-01-14T18:00:00Z"
+      }
+    }
+  ],
+  "lastUpdated": "2025-01-14T10:45:00Z"
+}
