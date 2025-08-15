@@ -55,7 +55,7 @@
   - Create secure token storage utilities using Expo SecureStore
   - _Requirements: 6.3, 6.5_
 
-- [ ] 8. Create authentication screens and forms
+- [x] 8. Create authentication screens and forms
 
   - Build LoginScreen with email/password and biometric login options
   - Implement SignupScreen with form validation and error handling

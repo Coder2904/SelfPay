@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "Authentication Service Generator",
+  "description": "Creates a comprehensive authentication service with Supabase integration including social login flows, session management, biometric authentication, and error handling when authentication-related files are modified",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/services/auth.ts",
+      "src/services/authService.ts",
+      "src/types/auth.ts",
+      "src/hooks/useAuth.ts",
+      "src/stores/authStore.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Create a comprehensive authentication service with Supabase integration that includes:\n\n1. **Core Authentication Service** (`src/services/authService.ts`):\n   - Supabase client configuration\n   - Social login methods (Google, Apple, Email/Password)\n   - Sign up, sign in, sign out functions\n   - Session management with secure storage\n   - Password reset functionality\n   - Email verification handling\n\n2. **TypeScript Interfaces** (`src/types/auth.ts`):\n   - User interface with proper typing\n   - Authentication state types\n   - Login/signup form data types\n   - Error response types\n   - Session data types\n\n3. **Authentication Hook** (`src/hooks/useAuth.ts`):\n   - React hook for authentication state management\n   - Loading states for all auth operations\n   - Error handling with user-friendly messages\n   - Automatic session restoration on app launch\n   - Biometric authentication integration\n\n4. **Authentication Store** (`src/stores/authStore.ts`):\n   - Global state management for auth\n   - Secure token storage using AsyncStorage/SecureStore\n   - Session persistence and restoration\n   - User profile management\n\n5. **Error Handling & Retry Logic**:\n   - Comprehensive error catching and logging\n   - Retry mechanisms for network failures\n   - User-friendly error messages\n   - Offline state handling\n\n6. **Biometric Authentication Setup**:\n   - Integration with device biometrics (Face ID, Touch ID, Fingerprint)\n   - Fallback to PIN/password when biometrics unavailable\n   - Secure credential storage for biometric auth\n\nInclude proper TypeScript typing throughout, comprehensive error handling, loading states, and follow React Native best practices for secure authentication."
+  }
+}

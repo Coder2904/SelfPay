@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Smart Onboarding Flow",
+  "description": "Creates a personalized onboarding experience with 3-question quiz, platform selection, goal setting, and progress tracking with smooth animations",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/screens/onboarding/*",
+      "src/components/onboarding/*",
+      "src/features/onboarding/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Create smart onboarding flow with personalization including: 1) A 3-question quiz component with conditional logic that adapts questions based on previous answers, 2) Platform selection screen with icons and descriptions for different platforms, 3) Goal setting interface with visual feedback and progress indicators, 4) Progress tracking component that shows completion through onboarding steps, 5) Smooth animations and transitions between all onboarding screens using React Native Animated API or similar. Ensure the flow is intuitive, accessible, and follows modern mobile UX patterns. Include proper TypeScript types and integrate with the existing navigation structure."
+  }
+}

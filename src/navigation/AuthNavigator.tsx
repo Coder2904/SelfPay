@@ -7,13 +7,12 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import type { AuthStackParamList } from "../types/navigation";
-
-// TODO: Import actual screen components when they're implemented
-// For now, using placeholder components
-const LoginScreen = () => null;
-const SignupScreen = () => null;
-const ForgotPasswordScreen = () => null;
-const BiometricSetupScreen = () => null;
+import {
+  LoginScreen,
+  SignupScreen,
+  BiometricSetupScreen,
+  ForgotPasswordScreen,
+} from "../screens/auth";
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 

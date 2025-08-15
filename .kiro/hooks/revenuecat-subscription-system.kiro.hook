@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "name": "RevenueCat Subscription System",
+  "description": "Implements complete RevenueCat subscription system with SDK configuration for iOS and Android, three-tier subscription model (Free, Basic $9.99, Premium $19.99), paywall screens with purchase buttons, receipt validation and restoration, subscription status management, purchase analytics and error handling",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "package.json",
+      "src/services/**",
+      "src/components/**",
+      "src/screens/**",
+      "src/hooks/**",
+      "src/types/**",
+      "src/stores/**",
+      "App.tsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "I need to implement a complete RevenueCat subscription system. Please help me:\n\n1. Install and configure RevenueCat SDK for React Native (iOS and Android)\n2. Set up three-tier subscription model:\n   - Free tier (default)\n   - Basic tier ($9.99/month)\n   - Premium tier ($19.99/month)\n3. Create paywall screens with purchase buttons and pricing display\n4. Implement receipt validation and purchase restoration functionality\n5. Build subscription status management system\n6. Add purchase analytics tracking\n7. Include comprehensive error handling for purchase flows\n8. Create TypeScript types for subscription data\n9. Set up state management for subscription status\n10. Add hooks for subscription management\n\nFocus on creating a production-ready implementation with proper error handling, loading states, and user feedback. Include both the service layer for RevenueCat integration and the UI components for the paywall experience."
+  }
+}
