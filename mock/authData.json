@@ -1,0 +1,57 @@
+{
+  "mockUsers": [
+    {
+      "id": "user_1",
+      "email": "demo@selfpay.com",
+      "password": "password123",
+      "firstName": "Demo",
+      "lastName": "User",
+      "phoneNumber": "+1234567890",
+      "profilePicture": null,
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-14T10:00:00Z",
+      "preferences": {
+        "enableBiometric": true,
+        "enableNotifications": true,
+        "preferredPlatforms": ["uber", "lyft", "doordash"],
+        "defaultLocation": {
+          "lat": 37.7749,
+          "lng": -122.4194,
+          "name": "San Francisco, CA"
+        },
+        "theme": "system",
+        "language": "en"
+      }
+    },
+    {
+      "id": "user_2",
+      "email": "test@example.com",
+      "password": "test123",
+      "firstName": "Test",
+      "lastName": "User",
+      "phoneNumber": "+1987654321",
+      "profilePicture": null,
+      "createdAt": "2025-01-10T00:00:00Z",
+      "updatedAt": "2025-01-14T10:00:00Z",
+      "preferences": {
+        "enableBiometric": false,
+        "enableNotifications": false,
+        "preferredPlatforms": ["grubhub", "instacart"],
+        "theme": "light",
+        "language": "en"
+      }
+    }
+  ],
+  "mockTokens": {
+    "user_1": {
+      "accessToken": "mock_access_token_user_1",
+      "refreshToken": "mock_refresh_token_user_1",
+      "expiresAt": 1737724800000
+    },
+    "user_2": {
+      "accessToken": "mock_access_token_user_2",
+      "refreshToken": "mock_refresh_token_user_2",
+      "expiresAt": 1737724800000
+    }
+  }
+}

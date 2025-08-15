@@ -88,6 +88,7 @@ export const MOCK_DATA_PATHS = {
   SURGE_DATA: "../mock/surgeData.json",
   INCOME_DATA: "../mock/incomeData.json",
   SUBSCRIPTION_DATA: "../mock/subscriptionData.json",
+  AUTH_DATA: "../mock/authData.json",
 } as const;
 
 export {};
