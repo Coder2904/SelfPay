@@ -12,4 +12,7 @@ export * from "./secureStorage";
 // Biometric authentication utilities
 export * from "./biometricAuth";
 
+// Onboarding utilities
+export * from "./onboardingUtils";
+
 export {};

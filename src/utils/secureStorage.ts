@@ -162,4 +162,40 @@ export function willTokensExpireSoon(tokens: AuthTokens): boolean {
   return fiveMinutesFromNow >= tokens.expiresAt;
 }
 
+/**
+ * Generic secure data storage
+ */
+export async function storeData(key: string, value: string): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch (error) {
+    console.error(`Failed to store data for key ${key}:`, error);
+    throw new Error(`Failed to store data securely for key: ${key}`);
+  }
+}
+
+/**
+ * Generic secure data retrieval
+ */
+export async function getData(key: string): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch (error) {
+    console.error(`Failed to retrieve data for key ${key}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Generic secure data removal
+ */
+export async function removeData(key: string): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(key);
+  } catch (error) {
+    console.error(`Failed to remove data for key ${key}:`, error);
+    // Don't throw error for cleanup operations
+  }
+}
+
 export {};

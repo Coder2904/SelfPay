@@ -1,593 +1,286 @@
 /**
  * Authentication Service
- * Handles Supabase authentication with mock data switching logic
+ * Comprehensive authentication service with Supabase integration
  */
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import type {
+import {
+  createClient,
+  SupabaseClient,
+  Session,
+  User as SupabaseUser,
+} from "@supabase/supabase-js";
+import * as LocalAuthentication from "expo-local-authentication";
+// Note: expo-crypto removed - using built-in crypto for token generation
+import {
   User,
   LoginCredentials,
   SignupCredentials,
+  SocialLoginCredentials,
+  AuthResult,
   AuthTokens,
+  AuthError,
+  SessionData,
+  PasswordResetRequest,
+  PasswordResetConfirm,
+  EmailVerificationRequest,
+  BiometricAuthRequest,
   BiometricSettings,
+  AuthEvent,
+  AuthEventType,
 } from "../types/auth";
-import { USE_MOCK_DATA, API_ENDPOINTS } from "../constants";
 import {
   storeAuthTokens,
   getAuthTokens,
-  areTokensExpired,
-  willTokensExpireSoon,
-  storeUserPreferences,
+  clearAuthTokens,
   storeBiometricEnabled,
   isBiometricEnabled,
-  clearAllUserData,
+  areTokensExpired,
+  willTokensExpireSoon,
 } from "../utils/secureStorage";
-import {
-  checkBiometricAvailability,
-  authenticateWithBiometrics,
-  setupBiometricAuth,
-  disableBiometricAuth,
-} from "../utils/biometricAuth";
-
-// Mock data interface
-interface MockAuthData {
-  mockUsers: Array<User & { password: string }>;
-  mockTokens: Record<string, AuthTokens>;
-}
+import { API_ENDPOINTS, USE_MOCK_DATA, FEATURE_FLAGS } from "../constants";
 
 class AuthService {
-  private supabase: SupabaseClient | null = null;
-  private mockData: MockAuthData | null = null;
+  private supabase: SupabaseClient;
+  private retryAttempts = 0;
+  private maxRetries = 3;
+  private eventListeners: ((event: AuthEvent) => void)[] = [];
 
   constructor() {
-    this.initializeSupabase();
-    if (USE_MOCK_DATA) {
-      this.loadMockData();
-    }
-  }
-
-  /**
-   * Initialize Supabase client
-   */
-  private initializeSupabase(): void {
-    try {
-      if (
-        !USE_MOCK_DATA &&
-        API_ENDPOINTS.SUPABASE_URL &&
-        API_ENDPOINTS.SUPABASE_ANON_KEY
-      ) {
-        this.supabase = createClient(
-          API_ENDPOINTS.SUPABASE_URL,
-          API_ENDPOINTS.SUPABASE_ANON_KEY
-        );
-      }
-    } catch (error) {
-      console.error("Failed to initialize Supabase client:", error);
-    }
-  }
-
-  /**
-   * Load mock authentication data
-   */
-  private async loadMockData(): Promise<void> {
-    try {
-      const mockAuthData = require("../../mock/authData.json") as MockAuthData;
-      this.mockData = mockAuthData;
-    } catch (error) {
-      console.error("Failed to load mock auth data:", error);
-      // Fallback mock data
-      this.mockData = {
-        mockUsers: [
-          {
-            id: "user_1",
-            email: "demo@selfpay.com",
-            password: "password123",
-            firstName: "Demo",
-            lastName: "User",
-            phoneNumber: "+1234567890",
-            profilePicture: undefined,
-            createdAt: "2025-01-01T00:00:00Z",
-            updatedAt: "2025-01-14T10:00:00Z",
-            preferences: {
-              enableBiometric: true,
-              enableNotifications: true,
-              preferredPlatforms: ["uber", "lyft"],
-              theme: "system",
-              language: "en",
-            },
-          },
-        ],
-        mockTokens: {
-          user_1: {
-            accessToken: "mock_access_token_user_1",
-            refreshToken: "mock_refresh_token_user_1",
-            expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
-          },
+    this.supabase = createClient(
+      API_ENDPOINTS.SUPABASE_URL,
+      API_ENDPOINTS.SUPABASE_ANON_KEY,
+      {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: false, // We handle persistence manually
+          detectSessionInUrl: false,
         },
-      };
-    }
-  }
-
-  /**
-   * Login with email and password
-   */
-  async login(credentials: LoginCredentials): Promise<{
-    success: boolean;
-    user?: User;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
-    try {
-      if (USE_MOCK_DATA) {
-        return this.mockLogin(credentials);
-      } else {
-        return this.supabaseLogin(credentials);
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      return {
-        success: false,
-        error: "An unexpected error occurred during login",
-      };
-    }
-  }
-
-  /**
-   * Mock login implementation
-   */
-  private async mockLogin(credentials: LoginCredentials): Promise<{
-    success: boolean;
-    user?: User;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
-    if (!this.mockData) {
-      await this.loadMockData();
-    }
-
-    const mockUser = this.mockData?.mockUsers.find(
-      (user) =>
-        user.email === credentials.email &&
-        user.password === credentials.password
     );
 
-    if (!mockUser) {
-      return {
-        success: false,
-        error: "Invalid email or password",
-      };
-    }
-
-    const tokens = this.mockData?.mockTokens[mockUser.id];
-    if (!tokens) {
-      return {
-        success: false,
-        error: "Authentication tokens not found",
-      };
-    }
-
-    // Store tokens securely
-    await storeAuthTokens(tokens);
-
-    // Store user preferences if they exist
-    if (mockUser.preferences) {
-      await storeUserPreferences(mockUser.preferences);
-    }
-
-    // Remove password from user object
-    const { password, ...userWithoutPassword } = mockUser;
-
-    return {
-      success: true,
-      user: userWithoutPassword,
-      tokens,
-    };
-  }
-
-  /**
-   * Supabase login implementation
-   */
-  private async supabaseLogin(credentials: LoginCredentials): Promise<{
-    success: boolean;
-    user?: User;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
-    if (!this.supabase) {
-      return {
-        success: false,
-        error: "Supabase client not initialized",
-      };
-    }
-
-    const { data, error } = await this.supabase.auth.signInWithPassword({
-      email: credentials.email,
-      password: credentials.password,
+    // Set up auth state change listener
+    this.supabase.auth.onAuthStateChange((event, session) => {
+      this.handleAuthStateChange(event as AuthEventType, session);
     });
-
-    if (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-
-    if (!data.user || !data.session) {
-      return {
-        success: false,
-        error: "Authentication failed",
-      };
-    }
-
-    const tokens: AuthTokens = {
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      expiresAt: data.session.expires_at
-        ? data.session.expires_at * 1000
-        : Date.now() + 60 * 60 * 1000,
-    };
-
-    await storeAuthTokens(tokens);
-
-    const user: User = {
-      id: data.user.id,
-      email: data.user.email || "",
-      firstName: data.user.user_metadata?.firstName,
-      lastName: data.user.user_metadata?.lastName,
-      phoneNumber: data.user.phone,
-      profilePicture: data.user.user_metadata?.profilePicture,
-      createdAt: data.user.created_at,
-      updatedAt: data.user.updated_at || data.user.created_at,
-      preferences: data.user.user_metadata?.preferences,
-    };
-
-    return {
-      success: true,
-      user,
-      tokens,
-    };
   }
 
   /**
-   * Sign up new user
+   * Initialize authentication service
    */
-  async signup(credentials: SignupCredentials): Promise<{
-    success: boolean;
-    user?: User;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
+  async initialize(): Promise<void> {
     try {
+      if (USE_MOCK_DATA) {
+        // Mock initialization - just check stored tokens
+        const tokens = await getAuthTokens();
+        if (tokens && !areTokensExpired(tokens)) {
+          // Tokens are valid, user is authenticated
+          return;
+        }
+      } else {
+        // Real Supabase initialization
+        const {
+          data: { session },
+        } = await this.supabase.auth.getSession();
+        if (session) {
+          await this.handleSession(session);
+        }
+      }
+    } catch (error) {
+      console.error("Auth service initialization failed:", error);
+      // Clear any corrupted data
+      await clearAuthTokens();
+    }
+  }
+
+  /**
+   * Sign up with email and password
+   */
+  async signup(credentials: SignupCredentials): Promise<AuthResult> {
+    try {
+      this.retryAttempts = 0;
+
       if (USE_MOCK_DATA) {
         return this.mockSignup(credentials);
-      } else {
-        return this.supabaseSignup(credentials);
       }
-    } catch (error) {
-      console.error("Signup error:", error);
-      return {
-        success: false,
-        error: "An unexpected error occurred during signup",
-      };
-    }
-  }
 
-  /**
-   * Mock signup implementation
-   */
-  private async mockSignup(credentials: SignupCredentials): Promise<{
-    success: boolean;
-    user?: User;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
-    if (!this.mockData) {
-      await this.loadMockData();
-    }
-
-    // Check if user already exists
-    const existingUser = this.mockData?.mockUsers.find(
-      (user) => user.email === credentials.email
-    );
-
-    if (existingUser) {
-      return {
-        success: false,
-        error: "User with this email already exists",
-      };
-    }
-
-    // Create new mock user
-    const newUserId = `user_${Date.now()}`;
-    const newUser: User & { password: string } = {
-      id: newUserId,
-      email: credentials.email,
-      password: credentials.password,
-      firstName: credentials.firstName,
-      lastName: credentials.lastName,
-      phoneNumber: credentials.phoneNumber,
-      profilePicture: undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      preferences: {
-        enableBiometric: false,
-        enableNotifications: true,
-        preferredPlatforms: [],
-        theme: "system",
-        language: "en",
-      },
-    };
-
-    // Create tokens for new user
-    const tokens: AuthTokens = {
-      accessToken: `mock_access_token_${newUserId}`,
-      refreshToken: `mock_refresh_token_${newUserId}`,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
-    };
-
-    // Store tokens securely
-    await storeAuthTokens(tokens);
-
-    // Store user preferences
-    if (newUser.preferences) {
-      await storeUserPreferences(newUser.preferences);
-    }
-
-    // Remove password from user object
-    const { password, ...userWithoutPassword } = newUser;
-
-    return {
-      success: true,
-      user: userWithoutPassword,
-      tokens,
-    };
-  }
-
-  /**
-   * Supabase signup implementation
-   */
-  private async supabaseSignup(credentials: SignupCredentials): Promise<{
-    success: boolean;
-    user?: User;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
-    if (!this.supabase) {
-      return {
-        success: false,
-        error: "Supabase client not initialized",
-      };
-    }
-
-    const { data, error } = await this.supabase.auth.signUp({
-      email: credentials.email,
-      password: credentials.password,
-      options: {
-        data: {
-          firstName: credentials.firstName,
-          lastName: credentials.lastName,
-          phoneNumber: credentials.phoneNumber,
-          preferences: {
-            enableBiometric: false,
-            enableNotifications: true,
-            preferredPlatforms: [],
-            theme: "system",
-            language: "en",
+      const { data, error } = await this.supabase.auth.signUp({
+        email: credentials.email,
+        password: credentials.password,
+        options: {
+          data: {
+            first_name: credentials.firstName,
+            last_name: credentials.lastName,
+            phone_number: credentials.phoneNumber,
           },
         },
-      },
-    });
+      });
 
-    if (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
+      if (error) {
+        throw this.createAuthError(error);
+      }
 
-    if (!data.user) {
-      return {
-        success: false,
-        error: "User creation failed",
-      };
-    }
+      if (!data.user) {
+        throw new Error("Signup failed - no user returned");
+      }
 
-    // Handle email confirmation flow
-    if (!data.session) {
+      const user = this.mapSupabaseUser(data.user);
+
+      // Check if email verification is required
+      if (!data.session && data.user && !data.user.email_confirmed_at) {
+        return {
+          success: true,
+          user,
+          requiresEmailVerification: true,
+        };
+      }
+
+      if (data.session) {
+        const tokens = this.extractTokens(data.session);
+        await storeAuthTokens(tokens);
+
+        return {
+          success: true,
+          user,
+          tokens,
+        };
+      }
+
       return {
         success: true,
-        user: {
-          id: data.user.id,
-          email: data.user.email || "",
-          firstName: credentials.firstName,
-          lastName: credentials.lastName,
-          phoneNumber: credentials.phoneNumber,
-          profilePicture: undefined,
-          createdAt: data.user.created_at,
-          updatedAt: data.user.updated_at || data.user.created_at,
-        },
-        // No tokens yet - user needs to confirm email
+        user,
+        requiresEmailVerification: true,
       };
+    } catch (error) {
+      return this.handleAuthError(error, "signup");
     }
-
-    const tokens: AuthTokens = {
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      expiresAt: data.session.expires_at
-        ? data.session.expires_at * 1000
-        : Date.now() + 60 * 60 * 1000,
-    };
-
-    await storeAuthTokens(tokens);
-
-    const user: User = {
-      id: data.user.id,
-      email: data.user.email || "",
-      firstName: credentials.firstName,
-      lastName: credentials.lastName,
-      phoneNumber: credentials.phoneNumber,
-      profilePicture: undefined,
-      createdAt: data.user.created_at,
-      updatedAt: data.user.updated_at || data.user.created_at,
-      preferences: data.user.user_metadata?.preferences,
-    };
-
-    return {
-      success: true,
-      user,
-      tokens,
-    };
   }
 
   /**
-   * Logout user
+   * Sign in with email and password
    */
-  async logout(): Promise<{ success: boolean; error?: string }> {
+  async login(credentials: LoginCredentials): Promise<AuthResult> {
+    try {
+      this.retryAttempts = 0;
+
+      if (USE_MOCK_DATA) {
+        return this.mockLogin(credentials);
+      }
+
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
+
+      if (error) {
+        throw this.createAuthError(error);
+      }
+
+      if (!data.user || !data.session) {
+        throw new Error("Login failed - invalid response");
+      }
+
+      const user = this.mapSupabaseUser(data.user);
+      const tokens = this.extractTokens(data.session);
+
+      await storeAuthTokens(tokens);
+
+      return {
+        success: true,
+        user,
+        tokens,
+      };
+    } catch (error) {
+      return this.handleAuthError(error, "login");
+    }
+  }
+
+  /**
+   * Social login (Google, Apple)
+   */
+  async socialLogin(credentials: SocialLoginCredentials): Promise<AuthResult> {
     try {
       if (USE_MOCK_DATA) {
-        return this.mockLogout();
-      } else {
-        return this.supabaseLogout();
+        return this.mockSocialLogin(credentials);
       }
+
+      const { data, error } = await this.supabase.auth.signInWithIdToken({
+        provider: credentials.provider,
+        token: credentials.idToken!,
+        access_token: credentials.accessToken,
+      });
+
+      if (error) {
+        throw this.createAuthError(error);
+      }
+
+      if (!data.user || !data.session) {
+        throw new Error("Social login failed - invalid response");
+      }
+
+      const user = this.mapSupabaseUser(data.user);
+      const tokens = this.extractTokens(data.session);
+
+      await storeAuthTokens(tokens);
+
+      return {
+        success: true,
+        user,
+        tokens,
+      };
+    } catch (error) {
+      return this.handleAuthError(error, "socialLogin");
+    }
+  }
+
+  /**
+   * Sign out
+   */
+  async logout(): Promise<void> {
+    try {
+      if (!USE_MOCK_DATA) {
+        await this.supabase.auth.signOut();
+      }
+
+      await clearAuthTokens();
+
+      // Emit signed out event
+      this.emitAuthEvent("SIGNED_OUT", null, null);
     } catch (error) {
       console.error("Logout error:", error);
-      return {
-        success: false,
-        error: "An unexpected error occurred during logout",
-      };
+      // Always clear tokens even if logout fails
+      await clearAuthTokens();
     }
-  }
-
-  /**
-   * Mock logout implementation
-   */
-  private async mockLogout(): Promise<{ success: boolean; error?: string }> {
-    await clearAllUserData();
-    return { success: true };
-  }
-
-  /**
-   * Supabase logout implementation
-   */
-  private async supabaseLogout(): Promise<{
-    success: boolean;
-    error?: string;
-  }> {
-    if (!this.supabase) {
-      await clearAllUserData();
-      return { success: true };
-    }
-
-    const { error } = await this.supabase.auth.signOut();
-    await clearAllUserData();
-
-    if (error) {
-      console.error("Supabase logout error:", error);
-      // Still return success since we cleared local data
-    }
-
-    return { success: true };
   }
 
   /**
    * Refresh authentication tokens
    */
-  async refreshToken(): Promise<{
-    success: boolean;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
+  async refreshToken(): Promise<AuthResult> {
     try {
       if (USE_MOCK_DATA) {
         return this.mockRefreshToken();
-      } else {
-        return this.supabaseRefreshToken();
       }
+
+      const { data, error } = await this.supabase.auth.refreshSession();
+
+      if (error) {
+        throw this.createAuthError(error);
+      }
+
+      if (!data.session) {
+        throw new Error("Token refresh failed - no session");
+      }
+
+      const tokens = this.extractTokens(data.session);
+      await storeAuthTokens(tokens);
+
+      return {
+        success: true,
+        tokens,
+      };
     } catch (error) {
-      console.error("Token refresh error:", error);
-      return {
-        success: false,
-        error: "An unexpected error occurred during token refresh",
-      };
+      return this.handleAuthError(error, "refreshToken");
     }
-  }
-
-  /**
-   * Mock token refresh implementation
-   */
-  private async mockRefreshToken(): Promise<{
-    success: boolean;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
-    const currentTokens = await getAuthTokens();
-    if (!currentTokens) {
-      return {
-        success: false,
-        error: "No tokens found to refresh",
-      };
-    }
-
-    // Generate new mock tokens
-    const newTokens: AuthTokens = {
-      accessToken: `refreshed_${currentTokens.accessToken}`,
-      refreshToken: currentTokens.refreshToken, // Keep same refresh token
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
-    };
-
-    await storeAuthTokens(newTokens);
-
-    return {
-      success: true,
-      tokens: newTokens,
-    };
-  }
-
-  /**
-   * Supabase token refresh implementation
-   */
-  private async supabaseRefreshToken(): Promise<{
-    success: boolean;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
-    if (!this.supabase) {
-      return {
-        success: false,
-        error: "Supabase client not initialized",
-      };
-    }
-
-    const { data, error } = await this.supabase.auth.refreshSession();
-
-    if (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-
-    if (!data.session) {
-      return {
-        success: false,
-        error: "Failed to refresh session",
-      };
-    }
-
-    const tokens: AuthTokens = {
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      expiresAt: data.session.expires_at
-        ? data.session.expires_at * 1000
-        : Date.now() + 60 * 60 * 1000,
-    };
-
-    await storeAuthTokens(tokens);
-
-    return {
-      success: true,
-      tokens,
-    };
   }
 
   /**
@@ -597,137 +290,129 @@ class AuthService {
     isAuthenticated: boolean;
     user?: User;
     tokens?: AuthTokens;
-    needsRefresh?: boolean;
   }> {
     try {
       const tokens = await getAuthTokens();
-      if (!tokens) {
+
+      if (!tokens || areTokensExpired(tokens)) {
         return { isAuthenticated: false };
       }
 
-      if (areTokensExpired(tokens)) {
+      // If tokens expire soon, try to refresh
+      if (willTokensExpireSoon(tokens)) {
+        const refreshResult = await this.refreshToken();
+        if (refreshResult.success && refreshResult.tokens) {
+          return {
+            isAuthenticated: true,
+            tokens: refreshResult.tokens,
+            user: refreshResult.user,
+          };
+        }
+      }
+
+      if (USE_MOCK_DATA) {
+        const mockUser = await this.getMockUser();
         return {
-          isAuthenticated: false,
-          needsRefresh: true,
+          isAuthenticated: true,
+          tokens,
+          user: mockUser,
         };
       }
 
-      // TODO: Get user data from stored preferences or API
-      // For now, return basic auth status
+      const {
+        data: { user },
+      } = await this.supabase.auth.getUser();
+
       return {
-        isAuthenticated: true,
+        isAuthenticated: !!user,
         tokens,
-        needsRefresh: willTokensExpireSoon(tokens),
+        user: user ? this.mapSupabaseUser(user) : undefined,
       };
     } catch (error) {
-      console.error("Failed to get auth status:", error);
+      console.error("Get auth status error:", error);
       return { isAuthenticated: false };
     }
   }
 
   /**
-   * Setup biometric authentication
+   * Request password reset
    */
-  async setupBiometric(): Promise<{
-    success: boolean;
-    settings?: BiometricSettings;
-    error?: string;
-  }> {
+  async requestPasswordReset(
+    request: PasswordResetRequest
+  ): Promise<AuthResult> {
     try {
-      const result = await setupBiometricAuth();
-
-      if (result.success && result.settings) {
-        await storeBiometricEnabled(true);
+      if (USE_MOCK_DATA) {
+        return { success: true };
       }
 
-      return result;
+      const { error } = await this.supabase.auth.resetPasswordForEmail(
+        request.email,
+        {
+          redirectTo: "selfpay://reset-password",
+        }
+      );
+
+      if (error) {
+        throw this.createAuthError(error);
+      }
+
+      return { success: true };
     } catch (error) {
-      console.error("Failed to setup biometric auth:", error);
-      return {
-        success: false,
-        error: "Failed to setup biometric authentication",
-      };
+      return this.handleAuthError(error, "requestPasswordReset");
     }
   }
 
   /**
-   * Authenticate with biometrics
+   * Confirm password reset
    */
-  async authenticateWithBiometric(): Promise<{
-    success: boolean;
-    user?: User;
-    tokens?: AuthTokens;
-    error?: string;
-  }> {
+  async confirmPasswordReset(
+    request: PasswordResetConfirm
+  ): Promise<AuthResult> {
     try {
-      const isBiometricEnabledForUser = await isBiometricEnabled();
-      if (!isBiometricEnabledForUser) {
-        return {
-          success: false,
-          error: "Biometric authentication is not enabled",
-        };
+      if (USE_MOCK_DATA) {
+        return { success: true };
       }
 
-      const authResult = await authenticateWithBiometrics();
-      if (!authResult.success) {
-        return {
-          success: false,
-          error: authResult.error,
-        };
+      const { data, error } = await this.supabase.auth.updateUser({
+        password: request.newPassword,
+      });
+
+      if (error) {
+        throw this.createAuthError(error);
       }
 
-      // Get stored tokens after successful biometric auth
-      const tokens = await getAuthTokens();
-      if (!tokens) {
-        return {
-          success: false,
-          error: "No stored authentication found",
-        };
-      }
-
-      if (areTokensExpired(tokens)) {
-        // Try to refresh tokens
-        const refreshResult = await this.refreshToken();
-        if (!refreshResult.success) {
-          return {
-            success: false,
-            error: "Authentication expired and refresh failed",
-          };
-        }
-      }
-
-      // TODO: Get user data from stored preferences
       return {
         success: true,
-        tokens,
+        user: data.user ? this.mapSupabaseUser(data.user) : undefined,
       };
     } catch (error) {
-      console.error("Biometric authentication error:", error);
-      return {
-        success: false,
-        error: "Biometric authentication failed",
-      };
+      return this.handleAuthError(error, "confirmPasswordReset");
     }
   }
 
   /**
-   * Disable biometric authentication
+   * Resend email verification
    */
-  async disableBiometric(): Promise<{ success: boolean; error?: string }> {
+  async resendEmailVerification(
+    request: EmailVerificationRequest
+  ): Promise<AuthResult> {
     try {
-      const result = await disableBiometricAuth();
-
-      if (result.success) {
-        await storeBiometricEnabled(false);
+      if (USE_MOCK_DATA) {
+        return { success: true };
       }
 
-      return result;
+      const { error } = await this.supabase.auth.resend({
+        type: "signup",
+        email: request.email,
+      });
+
+      if (error) {
+        throw this.createAuthError(error);
+      }
+
+      return { success: true };
     } catch (error) {
-      console.error("Failed to disable biometric auth:", error);
-      return {
-        success: false,
-        error: "Failed to disable biometric authentication",
-      };
+      return this.handleAuthError(error, "resendEmailVerification");
     }
   }
 
@@ -736,15 +421,29 @@ class AuthService {
    */
   async getBiometricSettings(): Promise<BiometricSettings> {
     try {
-      const settings = await checkBiometricAvailability();
+      if (!FEATURE_FLAGS.ENABLE_BIOMETRIC_AUTH) {
+        return {
+          isEnabled: false,
+          isAvailable: false,
+          supportedTypes: [],
+        };
+      }
+
+      const isAvailable = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      const supportedTypes =
+        await LocalAuthentication.supportedAuthenticationTypesAsync();
       const isEnabled = await isBiometricEnabled();
 
       return {
-        ...settings,
-        isEnabled,
+        isEnabled: isEnabled && isAvailable && isEnrolled,
+        isAvailable: isAvailable && isEnrolled,
+        supportedTypes: supportedTypes.map(
+          (type) => LocalAuthentication.AuthenticationType[type]
+        ),
       };
     } catch (error) {
-      console.error("Failed to get biometric settings:", error);
+      console.error("Get biometric settings error:", error);
       return {
         isEnabled: false,
         isAvailable: false,
@@ -752,13 +451,349 @@ class AuthService {
       };
     }
   }
+
+  /**
+   * Authenticate with biometrics
+   */
+  async authenticateWithBiometrics(
+    request: BiometricAuthRequest
+  ): Promise<AuthResult> {
+    try {
+      if (!FEATURE_FLAGS.ENABLE_BIOMETRIC_AUTH) {
+        throw new Error("Biometric authentication is disabled");
+      }
+
+      const biometricSettings = await this.getBiometricSettings();
+
+      if (!biometricSettings.isAvailable) {
+        throw new Error("Biometric authentication is not available");
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: request.reason,
+        fallbackLabel: request.fallbackTitle || "Use Password",
+        disableDeviceFallback: request.disableDeviceFallback || false,
+      });
+
+      if (!result.success) {
+        throw new Error("Biometric authentication failed");
+      }
+
+      // Get stored tokens after successful biometric auth
+      const tokens = await getAuthTokens();
+      if (!tokens || areTokensExpired(tokens)) {
+        throw new Error("No valid session found");
+      }
+
+      const authStatus = await this.getAuthStatus();
+
+      return {
+        success: true,
+        user: authStatus.user,
+        tokens: authStatus.tokens,
+      };
+    } catch (error) {
+      return this.handleAuthError(error, "authenticateWithBiometrics");
+    }
+  }
+
+  /**
+   * Enable/disable biometric authentication
+   */
+  async setBiometricEnabled(enabled: boolean): Promise<void> {
+    await storeBiometricEnabled(enabled);
+  }
+
+  /**
+   * Setup biometric authentication
+   */
+  async setupBiometric(): Promise<AuthResult> {
+    try {
+      if (!FEATURE_FLAGS.ENABLE_BIOMETRIC_AUTH) {
+        return {
+          success: false,
+          error: "Biometric authentication is disabled",
+        };
+      }
+
+      const biometricSettings = await this.getBiometricSettings();
+
+      if (!biometricSettings.isAvailable) {
+        return {
+          success: false,
+          error: "Biometric authentication is not available",
+        };
+      }
+
+      // Test biometric authentication
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Set up biometric authentication for SelfPay",
+        fallbackLabel: "Cancel",
+        disableDeviceFallback: false,
+      });
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: "Biometric authentication setup was cancelled or failed",
+        };
+      }
+
+      // Enable biometric authentication
+      await this.setBiometricEnabled(true);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      return this.handleAuthError(error, "setupBiometric");
+    }
+  }
+
+  /**
+   * Add auth event listener
+   */
+  onAuthStateChange(callback: (event: AuthEvent) => void): () => void {
+    this.eventListeners.push(callback);
+
+    // Return unsubscribe function
+    return () => {
+      const index = this.eventListeners.indexOf(callback);
+      if (index > -1) {
+        this.eventListeners.splice(index, 1);
+      }
+    };
+  }
+
+  // Private methods
+
+  private async handleSession(session: Session): Promise<void> {
+    const tokens = this.extractTokens(session);
+    await storeAuthTokens(tokens);
+  }
+
+  private handleAuthStateChange(
+    event: AuthEventType,
+    session: Session | null
+  ): void {
+    const sessionData = session
+      ? {
+          user: this.mapSupabaseUser(session.user),
+          tokens: this.extractTokens(session),
+          expiresAt: new Date(session.expires_at! * 1000).getTime(),
+        }
+      : null;
+
+    this.emitAuthEvent(event, sessionData, sessionData?.user || null);
+  }
+
+  private emitAuthEvent(
+    type: AuthEventType,
+    session: SessionData | null,
+    user: User | null
+  ): void {
+    const event: AuthEvent = { type, session, user };
+    this.eventListeners.forEach((listener) => {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error("Auth event listener error:", error);
+      }
+    });
+  }
+
+  private extractTokens(session: Session): AuthTokens {
+    return {
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+      expiresAt: new Date(session.expires_at! * 1000).getTime(),
+    };
+  }
+
+  private mapSupabaseUser(supabaseUser: SupabaseUser): User {
+    return {
+      id: supabaseUser.id,
+      email: supabaseUser.email!,
+      firstName: supabaseUser.user_metadata?.first_name,
+      lastName: supabaseUser.user_metadata?.last_name,
+      phoneNumber: supabaseUser.user_metadata?.phone_number,
+      profilePicture: supabaseUser.user_metadata?.avatar_url,
+      createdAt: supabaseUser.created_at,
+      updatedAt: supabaseUser.updated_at!,
+      emailVerified: !!supabaseUser.email_confirmed_at,
+      lastSignInAt: supabaseUser.last_sign_in_at || undefined,
+      provider: (supabaseUser.app_metadata?.provider as any) || "email",
+    };
+  }
+
+  private createAuthError(error: any): AuthError {
+    return {
+      code: error.status?.toString() || "UNKNOWN_ERROR",
+      message: error.message || "An unknown error occurred",
+      details: error,
+    };
+  }
+
+  private async handleAuthError(
+    error: any,
+    operation: string
+  ): Promise<AuthResult> {
+    console.error(`Auth ${operation} error:`, error);
+
+    // Retry logic for network errors
+    if (this.shouldRetry(error) && this.retryAttempts < this.maxRetries) {
+      this.retryAttempts++;
+      await this.delay(1000 * this.retryAttempts);
+
+      // Retry the operation based on type
+      // This would need to be implemented per operation
+      console.log(`Retrying ${operation}, attempt ${this.retryAttempts}`);
+    }
+
+    return {
+      success: false,
+      error: this.getErrorMessage(error),
+    };
+  }
+
+  private shouldRetry(error: any): boolean {
+    // Retry on network errors, timeouts, etc.
+    return (
+      error.code === "NETWORK_ERROR" ||
+      error.code === "TIMEOUT" ||
+      error.status >= 500
+    );
+  }
+
+  private getErrorMessage(error: any): string {
+    if (error.message) return error.message;
+    if (error.error_description) return error.error_description;
+    if (typeof error === "string") return error;
+    return "An unexpected error occurred";
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // Mock methods for development
+
+  private async mockLogin(credentials: LoginCredentials): Promise<AuthResult> {
+    // Simulate network delay
+    await this.delay(1000);
+
+    // Mock validation
+    if (
+      credentials.email === "test@example.com" &&
+      credentials.password === "password123"
+    ) {
+      const mockUser = await this.getMockUser();
+      const mockTokens = this.generateMockTokens();
+
+      await storeAuthTokens(mockTokens);
+
+      return {
+        success: true,
+        user: mockUser,
+        tokens: mockTokens,
+      };
+    }
+
+    return {
+      success: false,
+      error: "Invalid email or password",
+    };
+  }
+
+  private async mockSignup(
+    credentials: SignupCredentials
+  ): Promise<AuthResult> {
+    await this.delay(1000);
+
+    const mockUser: User = {
+      id: `mock_user_${credentials.email.replace(/[^a-zA-Z0-9]/g, "_")}`,
+      email: credentials.email,
+      firstName: credentials.firstName,
+      lastName: credentials.lastName,
+      phoneNumber: credentials.phoneNumber,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      emailVerified: false,
+      provider: "email",
+    };
+
+    const mockTokens = this.generateMockTokens();
+    await storeAuthTokens(mockTokens);
+
+    return {
+      success: true,
+      user: mockUser,
+      tokens: mockTokens,
+    };
+  }
+
+  private async mockSocialLogin(
+    credentials: SocialLoginCredentials
+  ): Promise<AuthResult> {
+    await this.delay(800);
+
+    const mockUser: User = {
+      id: "mock-social-user-id",
+      email: "social@example.com",
+      firstName: "Social",
+      lastName: "User",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      emailVerified: true,
+      provider: credentials.provider,
+    };
+
+    const mockTokens = this.generateMockTokens();
+    await storeAuthTokens(mockTokens);
+
+    return {
+      success: true,
+      user: mockUser,
+      tokens: mockTokens,
+    };
+  }
+
+  private async mockRefreshToken(): Promise<AuthResult> {
+    await this.delay(500);
+
+    const mockTokens = this.generateMockTokens();
+    await storeAuthTokens(mockTokens);
+
+    return {
+      success: true,
+      tokens: mockTokens,
+    };
+  }
+
+  private async getMockUser(): Promise<User> {
+    return {
+      id: "mock-user-id",
+      email: "test@example.com",
+      firstName: "Test",
+      lastName: "User",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      emailVerified: true,
+      provider: "email",
+    };
+  }
+
+  private generateMockTokens(): AuthTokens {
+    return {
+      accessToken: "mock-access-token-" + Date.now(),
+      refreshToken: "mock-refresh-token-" + Date.now(),
+      expiresAt: Date.now() + 60 * 60 * 1000, // 1 hour
+    };
+  }
 }
 
-// Export singleton instance
+// Export singleton instance and class
 export const authService = new AuthService();
-
-// Export class for testing
 export { AuthService };
 
-// Default export for the service
-export default authService;
+export {};

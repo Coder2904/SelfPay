@@ -10,6 +10,9 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   preferences?: UserPreferences;
+  emailVerified?: boolean;
+  lastSignInAt?: string;
+  provider?: AuthProvider;
 }
 
 export interface LoginCredentials {
@@ -24,6 +27,12 @@ export interface SignupCredentials {
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
+}
+
+export interface SocialLoginCredentials {
+  provider: "google" | "apple";
+  idToken?: string;
+  accessToken?: string;
 }
 
 export interface UserPreferences {
@@ -58,6 +67,60 @@ export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
+}
+
+export interface AuthResult {
+  success: boolean;
+  user?: User;
+  tokens?: AuthTokens;
+  error?: string;
+  requiresEmailVerification?: boolean;
+}
+
+export interface AuthError {
+  code: string;
+  message: string;
+  details?: any;
+}
+
+export interface SessionData {
+  user: User;
+  tokens: AuthTokens;
+  expiresAt: number;
+}
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetConfirm {
+  token: string;
+  newPassword: string;
+}
+
+export interface EmailVerificationRequest {
+  email: string;
+}
+
+export interface BiometricAuthRequest {
+  reason: string;
+  fallbackTitle?: string;
+  disableDeviceFallback?: boolean;
+}
+
+export type AuthProvider = "email" | "google" | "apple" | "anonymous";
+
+export type AuthEventType =
+  | "SIGNED_IN"
+  | "SIGNED_OUT"
+  | "TOKEN_REFRESHED"
+  | "USER_UPDATED"
+  | "PASSWORD_RECOVERY";
+
+export interface AuthEvent {
+  type: AuthEventType;
+  session: SessionData | null;
+  user: User | null;
 }
 
 export {};

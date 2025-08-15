@@ -101,7 +101,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const handleBiometricLogin = async () => {
     setIsLoading(true);
     try {
-      const result = await authService.authenticateWithBiometric();
+      const result = await authService.authenticateWithBiometrics({
+        reason: "Sign in to SelfPay",
+        fallbackTitle: "Use Password",
+      });
 
       if (result.success) {
         console.log("Biometric login successful");
