@@ -21,4 +21,7 @@ export type { EmptyStateProps } from "./EmptyState";
 
 export { default as LoadingScreen } from "./LoadingScreen";
 
+export { OnboardingProgressIndicator } from "./OnboardingProgressIndicator";
+export type { OnboardingProgressIndicatorProps } from "./OnboardingProgressIndicator";
+
 export {};

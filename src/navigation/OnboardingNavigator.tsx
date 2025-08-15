@@ -8,13 +8,15 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import type { OnboardingStackParamList } from "../types/navigation";
 
-// TODO: Import actual screen components when they're implemented
-// For now, using placeholder components
+import {
+  PersonalizationQuizScreen,
+  PlatformSelectionScreen,
+  GoalSettingScreen,
+  PrivacyConsentScreen,
+} from "../screens/onboarding";
+
+// TODO: Implement these screens
 const WelcomeScreen = () => null;
-const PersonalizationQuizScreen = () => null;
-const PlatformSelectionScreen = () => null;
-const GoalSettingScreen = () => null;
-const PrivacyConsentScreen = () => null;
 const OnboardingCompleteScreen = () => null;
 
 const Stack = createNativeStackNavigator<OnboardingStackParamList>();
