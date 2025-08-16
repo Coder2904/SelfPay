@@ -15,4 +15,7 @@ export * from "./biometricAuth";
 // Onboarding utilities
 export * from "./onboardingUtils";
 
+// Subscription error utilities
+export * from "./subscriptionErrors";
+
 export {};

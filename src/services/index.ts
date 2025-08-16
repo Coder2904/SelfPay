@@ -9,4 +9,10 @@ export { authService, AuthService } from "./AuthService";
 // Onboarding service
 export { onboardingService, OnboardingService } from "./OnboardingService";
 
+// Subscription service
+export {
+  subscriptionService,
+  SubscriptionService,
+} from "./SubscriptionService";
+
 export {};

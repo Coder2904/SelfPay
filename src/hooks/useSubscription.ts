@@ -1,115 +1,157 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+/**
+ * useSubscription - Custom hooks for subscription management
+ * Provides convenient access to subscription state and actions
+ */
+
+import { useCallback, useEffect } from "react";
 import { useSubscriptionStore } from "../stores/subscriptionStore";
-import { queryKeys } from "../stores/queryClient";
-import { SubscriptionStatus, SubscriptionPlan } from "../types/subscription";
+import { SubscriptionTier } from "../types/subscription";
 
-// Custom hook that combines subscription store with React Query
-export const useSubscription = () => {
-  const queryClient = useQueryClient();
-  const subscriptionStore = useSubscriptionStore();
+/**
+ * Hook for accessing subscription status and related functionality
+ */
+export const useSubscriptionStatus = () => {
+  const {
+    status,
+    isLoading,
+    error,
+    lastChecked,
+    checkStatus,
+    hasFeature,
+    canAccessFeature,
+    clearError,
+  } = useSubscriptionStore();
 
-  // Query for subscription status
-  const statusQuery = useQuery({
-    queryKey: queryKeys.subscription.status,
-    queryFn: async (): Promise<SubscriptionStatus> => {
-      await subscriptionStore.checkStatus();
-      return subscriptionStore.status;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 10 * 60 * 1000, // Refetch every 10 minutes
-  });
+  // Auto-refresh subscription status if it's stale (older than 5 minutes)
+  useEffect(() => {
+    const shouldRefresh = () => {
+      if (!lastChecked) return true;
 
-  // Query for available plans
-  const plansQuery = useQuery({
-    queryKey: queryKeys.subscription.plans,
-    queryFn: async (): Promise<SubscriptionPlan[]> => {
-      if (subscriptionStore.availablePlans.length === 0) {
-        await subscriptionStore.initialize();
-      }
-      return subscriptionStore.availablePlans;
-    },
-    staleTime: 30 * 60 * 1000, // 30 minutes (plans don't change often)
-  });
+      const lastCheckedTime = new Date(lastChecked).getTime();
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
 
-  // Purchase mutation
-  const purchaseMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      await subscriptionStore.purchase(productId);
-    },
-    onSuccess: () => {
-      // Invalidate subscription status to get updated data
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.subscription.status,
-      });
-    },
-    onError: (error) => {
-      console.error("Purchase failed:", error);
-    },
-  });
+      return now - lastCheckedTime > fiveMinutes;
+    };
 
-  // Restore purchases mutation
-  const restoreMutation = useMutation({
-    mutationFn: async () => {
-      await subscriptionStore.restore();
-    },
-    onSuccess: () => {
-      // Invalidate subscription status to get updated data
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.subscription.status,
-      });
-    },
-    onError: (error) => {
-      console.error("Restore failed:", error);
-    },
-  });
+    if (shouldRefresh() && !isLoading) {
+      checkStatus();
+    }
+  }, [lastChecked, isLoading, checkStatus]);
 
-  // Check status mutation (for manual refresh)
-  const checkStatusMutation = useMutation({
-    mutationFn: async () => {
-      await subscriptionStore.checkStatus();
-      return subscriptionStore.status;
-    },
-    onSuccess: (status) => {
-      // Update cache with new status
-      queryClient.setQueryData(queryKeys.subscription.status, status);
-    },
-  });
+  const refresh = useCallback(async () => {
+    await checkStatus();
+  }, [checkStatus]);
 
   return {
-    // State
-    status: subscriptionStore.status,
-    availablePlans: subscriptionStore.availablePlans,
-    isLoading:
-      subscriptionStore.isLoading ||
-      statusQuery.isLoading ||
-      plansQuery.isLoading,
-    error: subscriptionStore.error || statusQuery.error || plansQuery.error,
-    lastChecked: subscriptionStore.lastChecked,
+    // Status information
+    status,
+    isLoading,
+    error,
+    lastChecked,
 
-    // Computed state
-    isActive: subscriptionStore.status.isActive,
-    tier: subscriptionStore.status.tier,
-    features: subscriptionStore.status.features,
+    // Computed properties
+    isActive: status.isActive,
+    tier: status.tier,
+    features: status.features,
+    expiresAt: status.expiresAt,
+    isTrialActive: status.trialEndsAt
+      ? new Date(status.trialEndsAt) > new Date()
+      : false,
+
+    // Helper functions
+    hasFeature,
+    canAccessFeature,
 
     // Actions
-    purchase: purchaseMutation.mutateAsync,
-    restore: restoreMutation.mutateAsync,
-    checkStatus: checkStatusMutation.mutateAsync,
+    refresh,
+    clearError,
+  };
+};
 
-    // Mutation states
-    isPurchaseLoading: purchaseMutation.isPending,
-    isRestoreLoading: restoreMutation.isPending,
-    isCheckingStatus: checkStatusMutation.isPending,
+/**
+ * Hook for subscription purchase functionality
+ */
+export const useSubscriptionPurchase = () => {
+  const { availablePlans, isLoading, error, purchase, restore, clearError } =
+    useSubscriptionStore();
 
-    // Utility functions
-    hasFeature: subscriptionStore.hasFeature,
-    canAccessFeature: subscriptionStore.canAccessFeature,
-    clearError: subscriptionStore.clearError,
-    initialize: subscriptionStore.initialize,
+  const purchaseProduct = useCallback(
+    async (productId: string) => {
+      try {
+        await purchase(productId);
+        return true;
+      } catch (error) {
+        console.error("Purchase failed:", error);
+        return false;
+      }
+    },
+    [purchase]
+  );
 
-    // Query utilities
-    refetchStatus: statusQuery.refetch,
-    refetchPlans: plansQuery.refetch,
+  const restorePurchases = useCallback(async () => {
+    try {
+      const purchases = await restore();
+      return purchases;
+    } catch (error) {
+      console.error("Restore failed:", error);
+      return [];
+    }
+  }, [restore]);
+
+  return {
+    // Available plans
+    availablePlans,
+
+    // Loading and error states
+    isLoading,
+    error,
+
+    // Actions
+    purchaseProduct,
+    restorePurchases,
+    clearError,
+  };
+};
+
+/**
+ * Hook for checking if user can access a specific feature
+ */
+export const useFeatureAccess = (featureId: string) => {
+  const { hasFeature } = useSubscriptionStore();
+
+  return {
+    hasAccess: hasFeature(featureId),
+    featureId,
+  };
+};
+
+/**
+ * Hook for checking if user can access features of a specific tier
+ */
+export const useTierAccess = (requiredTier: SubscriptionTier) => {
+  const { canAccessFeature, status } = useSubscriptionStore();
+
+  return {
+    hasAccess: canAccessFeature(requiredTier),
+    currentTier: status.tier,
+    requiredTier,
+  };
+};
+
+/**
+ * Hook for subscription initialization (use in app root)
+ */
+export const useSubscriptionInitialization = () => {
+  const { initialize, isLoading, error } = useSubscriptionStore();
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  return {
+    isInitializing: isLoading,
+    initializationError: error,
   };
 };
 

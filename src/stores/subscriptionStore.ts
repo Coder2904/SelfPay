@@ -6,12 +6,13 @@ import {
   SubscriptionPlan,
   PurchaseInfo,
 } from "../types/subscription";
+import { subscriptionService } from "../services/SubscriptionService";
 
 interface SubscriptionStore extends SubscriptionState {
   // Actions
   checkStatus: () => Promise<void>;
   purchase: (productId: string) => Promise<void>;
-  restore: () => Promise<void>;
+  restore: () => Promise<PurchaseInfo[]>;
   setStatus: (status: SubscriptionStatus) => void;
   setPlans: (plans: SubscriptionPlan[]) => void;
   setLoading: (loading: boolean) => void;
@@ -20,70 +21,9 @@ interface SubscriptionStore extends SubscriptionState {
   initialize: () => Promise<void>;
   hasFeature: (featureId: string) => boolean;
   canAccessFeature: (requiredTier: "free" | "premium" | "pro") => boolean;
+  setUserId: (userId: string) => Promise<void>;
+  clearUserId: () => Promise<void>;
 }
-
-// Mock subscription service - will be replaced with RevenueCat integration
-class MockSubscriptionService {
-  async checkSubscriptionStatus(): Promise<SubscriptionStatus> {
-    // TODO: Replace with RevenueCat implementation
-    return {
-      isActive: false,
-      tier: "free",
-      features: ["basic_tracking", "limited_recommendations"],
-      autoRenew: false,
-    };
-  }
-
-  async getAvailablePlans(): Promise<SubscriptionPlan[]> {
-    // TODO: Replace with RevenueCat implementation
-    return [
-      {
-        id: "premium_monthly",
-        tier: "premium",
-        name: "Premium Monthly",
-        description: "Advanced features for serious earners",
-        price: 9.99,
-        currency: "USD",
-        interval: "monthly",
-        features: [
-          "Unlimited surge tracking",
-          "Advanced recommendations",
-          "Income analytics",
-          "Goal tracking",
-        ],
-      },
-      {
-        id: "pro_monthly",
-        tier: "pro",
-        name: "Pro Monthly",
-        description: "Everything you need to maximize earnings",
-        price: 19.99,
-        currency: "USD",
-        interval: "monthly",
-        features: [
-          "All Premium features",
-          "Multi-platform optimization",
-          "Custom alerts",
-          "Priority support",
-          "Advanced analytics",
-        ],
-        isPopular: true,
-      },
-    ];
-  }
-
-  async purchaseProduct(productId: string): Promise<PurchaseInfo> {
-    // TODO: Replace with RevenueCat implementation
-    throw new Error("Purchase functionality not yet implemented");
-  }
-
-  async restorePurchases(): Promise<PurchaseInfo[]> {
-    // TODO: Replace with RevenueCat implementation
-    return [];
-  }
-}
-
-const subscriptionService = new MockSubscriptionService();
 
 export const useSubscriptionStore = create<SubscriptionStore>()(
   persist(
@@ -106,12 +46,18 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
 
           const status = await subscriptionService.checkSubscriptionStatus();
 
+          // Validate subscription status
+          if (!subscriptionService.validateSubscription(status)) {
+            throw new Error("Invalid subscription status received");
+          }
+
           set({
             status,
             isLoading: false,
             lastChecked: new Date().toISOString(),
           });
         } catch (error) {
+          console.error("Failed to check subscription status:", error);
           set({
             isLoading: false,
             error:
@@ -135,6 +81,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
 
           set({ isLoading: false });
         } catch (error) {
+          console.error("Purchase failed:", error);
           set({
             isLoading: false,
             error: error instanceof Error ? error.message : "Purchase failed",
@@ -155,7 +102,9 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
           }
 
           set({ isLoading: false });
+          return purchases;
         } catch (error) {
+          console.error("Restore failed:", error);
           set({
             isLoading: false,
             error: error instanceof Error ? error.message : "Restore failed",
@@ -195,6 +144,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
           // Check current subscription status
           await get().checkStatus();
         } catch (error) {
+          console.error("Failed to initialize subscription store:", error);
           set({
             isLoading: false,
             error:
@@ -202,6 +152,44 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
                 ? error.message
                 : "Failed to initialize subscription store",
           });
+        }
+      },
+
+      setUserId: async (userId: string) => {
+        try {
+          await subscriptionService.setUserId(userId);
+          // Refresh subscription status after setting user ID
+          await get().checkStatus();
+        } catch (error) {
+          console.error("Failed to set user ID:", error);
+          set({
+            error:
+              error instanceof Error ? error.message : "Failed to set user ID",
+          });
+          throw error;
+        }
+      },
+
+      clearUserId: async () => {
+        try {
+          await subscriptionService.clearUserId();
+          // Reset to default free status after logout
+          set({
+            status: {
+              isActive: false,
+              tier: "free",
+              features: ["basic_tracking", "limited_recommendations"],
+            },
+          });
+        } catch (error) {
+          console.error("Failed to clear user ID:", error);
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to clear user ID",
+          });
+          throw error;
         }
       },
 

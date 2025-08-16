@@ -6,12 +6,16 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 
 import type {
   AppTabParamList,
   IncomeStackParamList,
   ProfileStackParamList,
 } from "../types/navigation";
+import { SubscriptionGuard } from "../components/navigation/SubscriptionGuard";
+import { useSubscriptionStatus } from "../hooks/useSubscription";
+// Navigation listener will be implemented when needed
 
 // TODO: Import actual screen components when they're implemented
 // For now, using placeholder components
@@ -27,7 +31,7 @@ const GoalSettingsScreen = () => null;
 // Profile Stack screens
 const ProfileHomeScreen = () => null;
 const SettingsScreen = () => null;
-const SubscriptionManagementScreen = () => null;
+import SubscriptionManagementScreen from "../screens/SubscriptionManagementScreen";
 const PrivacyScreen = () => null;
 const SupportScreen = () => null;
 
@@ -60,7 +64,11 @@ const IncomeNavigator: React.FC = () => {
 
       <IncomeStack.Screen
         name="AccountConnection"
-        component={AccountConnectionScreen}
+        component={() => (
+          <SubscriptionGuard routeName="AccountConnection">
+            <AccountConnectionScreen />
+          </SubscriptionGuard>
+        )}
         options={{
           headerTitle: "Connect Account",
           headerBackTitle: "Back",
@@ -69,7 +77,11 @@ const IncomeNavigator: React.FC = () => {
 
       <IncomeStack.Screen
         name="TransactionHistory"
-        component={TransactionHistoryScreen}
+        component={() => (
+          <SubscriptionGuard routeName="TransactionHistory">
+            <TransactionHistoryScreen />
+          </SubscriptionGuard>
+        )}
         options={{
           headerTitle: "Transaction History",
           headerBackTitle: "Back",

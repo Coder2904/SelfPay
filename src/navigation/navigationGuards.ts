@@ -179,6 +179,15 @@ export const useSubscriptionGuard = (): SubscriptionGuardResult => {
 };
 
 /**
+ * Enhanced subscription guard that integrates with the subscription store
+ */
+export const useSubscriptionStoreGuard = () => {
+  // This will be implemented to use the actual subscription store
+  // For now, falling back to the mock implementation above
+  return useSubscriptionGuard();
+};
+
+/**
  * Higher-order component for protecting routes based on subscription status
  * Note: This should be moved to a .tsx file when implementing actual components
  */
