@@ -112,7 +112,7 @@
   - Create subscription status indicators and upgrade prompts
   - _Requirements: 5.5, 9.4_
 
-- [ ] 15. Create Smart Optimization Engine service and components
+- [x] 15. Create Smart Optimization Engine service and components
 
   - Implement SurgeService with getSurgeData() method returning mock data
   - Create SurgeHeatmap component for displaying surge pricing zones
@@ -121,7 +121,7 @@
   - Add placeholder logic marked with "// TODO manual implementation" comments
   - _Requirements: 3.1, 3.2, 3.4, 3.5_
 
-- [ ] 16. Build OptimizationScreen with surge and recommendation display
+- [x] 16. Build OptimizationScreen with surge and recommendation display
 
   - Create OptimizationScreen layout with heatmap and recommendations sections
   - Integrate SurgeHeatmap, RecommendationList, and EarningsOpportunityCard components
